@@ -7,16 +7,16 @@
 #    A static library
 #    A test executable
 #
-# See this example for parameter settings 
+# See this example for parameter settings
 #    examples/Makefile
 #
 #----------
 # Inputs - these variables describe what to build
 #
-#   INCLUDE_DIRS - Directories used to search for include files.
+#	INCLUDE_DIRS - Directories used to search for include files.
 #                   This generates a -I for each directory
-#	SRC_DIRS - Directories containing source file to built into the library
-#   SRC_FILES - Specific source files to build into library. Helpful when not all code 
+#	SRC_DIRS - Directories containing source files to build into the library
+#	SRC_FILES - Specific source files to build into library. Helpful when not all code
 #				in a directory can be built for test (hopefully a temporary situation)
 #	TEST_SRC_DIRS - Directories containing unit test code build into the unit test runner
 #				These do not go in a library. They are explicitly included in the test runner
@@ -29,7 +29,7 @@
 # and where to put and name outputs
 # See below to determine defaults
 #   COMPONENT_NAME - the name of the thing being built
-#   TEST_TARGET - name the test executable. By default it is 
+#   TEST_TARGET - name of the test executable. By default it is
 #			$(COMPONENT_NAME)_tests
 #		Helpful if you want 1 > make files in the same directory with different
 #		executables as output.
@@ -48,10 +48,10 @@
 #		Clean then build with this flag set to Y, then 'make gcov'
 #   CPPUTEST_MAPFILE - generate a map file
 #   CPPUTEST_WARNINGFLAGS - overly picky by default
-#	OTHER_MAKEFILE_TO_INCLUDE - a hook to use this makefile to make 
+#   OTHER_MAKEFILE_TO_INCLUDE - a hook to use this makefile to make
 #		other targets. Like CSlim, which is part of fitnesse
-#	CPPUTEST_USE_VPATH - Use Make's VPATH functionality to support user 
-#		specification of source files and directories that aren't below 
+#   CPPUTEST_USE_VPATH - Use Make's VPATH functionality to support user
+#		specification of source files and directories that aren't below
 #		the user's Makefile in the directory tree, like:
 #			SRC_DIRS += ../../lib/foo
 #		It defaults to N, and shouldn't be necessary except in the above case.
@@ -77,7 +77,7 @@ UNKNWOWN_OS_STR = Unknown
 
 # Compilers
 CC_VERSION_OUTPUT ="$(shell $(CXX) -v 2>&1)"
-CLANG_STR = clang 
+CLANG_STR = clang
 SUNSTUDIO_CXX_STR = SunStudio
 
 UNAME_OS = $(UNKNWOWN_OS_STR)
@@ -160,6 +160,11 @@ ifndef CPPUTEST_USE_STD_CPP_LIB
 	CPPUTEST_USE_STD_CPP_LIB = Y
 endif
 
+# Use long long, off by default
+ifndef CPPUTEST_USE_LONG_LONG
+	CPPUTEST_USE_LONG_LONG = N
+endif
+
 # Use gcov, off by default
 ifndef CPPUTEST_USE_GCOV
 	CPPUTEST_USE_GCOV = N
@@ -171,10 +176,10 @@ endif
 
 # Default warnings
 ifndef CPPUTEST_WARNINGFLAGS
-	CPPUTEST_WARNINGFLAGS =  -Wall -Wextra -Werror -Wshadow -Wswitch-default -Wswitch-enum -Wconversion
+	CPPUTEST_WARNINGFLAGS =  -Wall -Wextra -Werror -Wshadow -Wswitch-default -Wswitch-enum -Wconversion -Wno-long-long
 ifeq ($(CPPUTEST_PEDANTIC_ERRORS), Y)
 	CPPUTEST_WARNINGFLAGS += -pedantic-errors
-endif 
+endif
 ifeq ($(UNAME_OS),$(LINUX_STR))
 	CPPUTEST_WARNINGFLAGS += -Wsign-conversion
 endif
@@ -187,15 +192,25 @@ ifeq ($(COMPILER_NAME),$(CLANG_STR))
 # -Wno-disabled-macro-expansion -> Have to disable the macro expansion warning as the operator new overload warns on that.
 # -Wno-padded -> I sort-of like this warning but if there is a bool at the end of the class, it seems impossible to remove it! (except by making padding explicit)
 # -Wno-global-constructors Wno-exit-time-destructors -> Great warnings, but in CppUTest it is impossible to avoid as the automatic test registration depends on the global ctor and dtor
-# -Wno-weak-vtables -> The TEST_GROUP macro declares a class and will automatically inline its methods. Thats ok as they are only in one translation unit. Unfortunately, the warning can't detect that, so it must be disabled. 
-	CPPUTEST_CXX_WARNINGFLAGS += -Weverything -Wno-disabled-macro-expansion -Wno-padded -Wno-global-constructors -Wno-exit-time-destructors -Wno-weak-vtables
+# -Wno-weak-vtables -> The TEST_GROUP macro declares a class and will automatically inline its methods. Thats ok as they are only in one translation unit. Unfortunately, the warning can't detect that, so it must be disabled.
+# -Wno-old-style-casts -> We only use old style casts by decision
+# -Wno-c++11-long-long -> When it detects long long, then we can use it and no need for a warning about that
+	CPPUTEST_CXX_WARNINGFLAGS += -Weverything -Wno-disabled-macro-expansion -Wno-padded -Wno-global-constructors -Wno-exit-time-destructors -Wno-weak-vtables -Wno-old-style-cast -Wno-c++11-long-long
 	CPPUTEST_C_WARNINGFLAGS += -Weverything -Wno-padded
+
+# Clang "7" (Xcode 7 command-line tools) introduced new warnings by default that don't exist on previous versions of clang and cause errors when present.
+ifeq ($(findstring clang-7,$(CC_VERSION_OUTPUT)),clang-7)
+# -Wno-reserved-id-macro -> Many CppUTest macros start with __, which is a reserved namespace
+# -Wno-keyword-macro -> CppUTest redefines the 'new' keyword for memory leak tracking
+	CPPUTEST_CXX_WARNINGFLAGS += -Wno-reserved-id-macro -Wno-keyword-macro
+	CPPUTEST_C_WARNINGFLAGS += -Wno-reserved-id-macro -Wno-keyword-macro
+endif
 endif
 
 # Uhm. Maybe put some warning flags for SunStudio here?
 ifeq ($(COMPILER_NAME),$(SUNSTUDIO_CXX_STR))
-	CPPUTEST_CXX_WARNINGFLAGS = 
-	CPPUTEST_C_WARNINGFLAGS = 
+	CPPUTEST_CXX_WARNINGFLAGS =
+	CPPUTEST_C_WARNINGFLAGS =
 endif
 
 # Default dir for temporary files (d, o)
@@ -232,7 +247,7 @@ ifndef CPPUTEST_USE_VPATH
 endif
 # Make empty, instead of 'N', for usage in $(if ) conditionals
 ifneq ($(CPPUTEST_USE_VPATH), Y)
-	CPPUTEST_USE_VPATH := 
+	CPPUTEST_USE_VPATH :=
 endif
 
 ifndef TARGET_PLATFORM
@@ -245,15 +260,13 @@ endif
 # derived flags in the following area
 # --------------------------------------
 
-# Without the C library, we'll need to disable the C++ library and ... 
+# Without the C library, we'll need to disable the C++ library and ...
 ifeq ($(CPPUTEST_USE_STD_C_LIB), N)
 	CPPUTEST_USE_STD_CPP_LIB = N
 	CPPUTEST_USE_MEM_LEAK_DETECTION = N
 	CPPUTEST_CPPFLAGS += -DCPPUTEST_STD_C_LIB_DISABLED
 	CPPUTEST_CPPFLAGS += -nostdinc
 endif
-
-CPPUTEST_CPPFLAGS += -DCPPUTEST_COMPILATION
 
 ifeq ($(CPPUTEST_USE_MEM_LEAK_DETECTION), N)
 	CPPUTEST_CPPFLAGS += -DCPPUTEST_MEM_LEAK_DETECTION_DISABLED
@@ -263,7 +276,11 @@ else
     endif
     ifndef CPPUTEST_MEMLEAK_DETECTOR_MALLOC_MACRO_FILE
 	    CPPUTEST_MEMLEAK_DETECTOR_MALLOC_MACRO_FILE = -include $(CPPUTEST_HOME)/include/CppUTest/MemoryLeakDetectorMallocMacros.h
-	endif	
+	endif
+endif
+
+ifeq ($(CPPUTEST_USE_LONG_LONG), Y)
+	CPPUTEST_CPPFLAGS += -DCPPUTEST_USE_LONG_LONG
 endif
 
 ifeq ($(CPPUTEST_ENABLE_DEBUG), Y)
@@ -284,8 +301,8 @@ ifdef $(GMOCK_HOME)
 	CPPUTEST_CPPFLAGS += -I$(GMOCK_HOME)/include
 	GMOCK_LIBRARY = $(GMOCK_HOME)/lib/.libs/libgmock.a
 	LD_LIBRARIES += $(GMOCK_LIBRARY)
-	CPPUTEST_CPPFLAGS += -DINCLUDE_GTEST_TESTS
-	CPPUTEST_WARNINGFLAGS = 
+	CPPUTEST_CPPFLAGS += -DCPPUTEST_INCLUDE_GTEST_TESTS
+	CPPUTEST_WARNINGFLAGS =
 	CPPUTEST_CPPFLAGS += -I$(GTEST_HOME)/include -I$(GTEST_HOME)
 	GTEST_LIBRARY = $(GTEST_HOME)/lib/.libs/libgtest.a
 	LD_LIBRARIES += $(GTEST_LIBRARY)
@@ -301,7 +318,7 @@ CPPUTEST_CXXFLAGS += $(CPPUTEST_WARNINGFLAGS) $(CPPUTEST_CXX_WARNINGFLAGS)
 CPPUTEST_CPPFLAGS += $(CPPUTEST_WARNINGFLAGS)
 CPPUTEST_CXXFLAGS += $(CPPUTEST_MEMLEAK_DETECTOR_NEW_MACRO_FILE)
 CPPUTEST_CPPFLAGS += $(CPPUTEST_MEMLEAK_DETECTOR_MALLOC_MACRO_FILE)
-CPPUTEST_CFLAGS += $(CPPUTEST_C_WARNINGFLAGS) 
+CPPUTEST_CFLAGS += $(CPPUTEST_C_WARNINGFLAGS)
 
 TARGET_MAP = $(COMPONENT_NAME).map.txt
 ifeq ($(CPPUTEST_MAP_FILE), Y)
@@ -407,7 +424,7 @@ INCLUDES += $(foreach dir, $(INCLUDES_DIRS_EXPANDED), -I$(dir))
 MOCK_DIRS_EXPANDED = $(call get_dirs_from_dirspec, $(MOCKS_SRC_DIRS))
 INCLUDES += $(foreach dir, $(MOCK_DIRS_EXPANDED), -I$(dir))
 
-CPPUTEST_CPPFLAGS +=  $(INCLUDES) 
+CPPUTEST_CPPFLAGS +=  $(INCLUDES)
 
 DEP_FILES = $(call src_to_d, $(ALL_SRC))
 STUFF_TO_CLEAN += $(DEP_FILES) $(PRODUCTION_CODE_START) $(PRODUCTION_CODE_END)
@@ -430,18 +447,18 @@ RANLIB = ranlib
 # Targets
 
 .PHONY: all
-all: start $(TEST_TARGET)  
-	$(RUN_TEST_TARGET)	
+all: start $(TEST_TARGET)
+	$(RUN_TEST_TARGET)
 
 .PHONY: start
-start: $(TEST_TARGET) 
+start: $(TEST_TARGET)
 	$(SILENCE)START_TIME=$(call time)
 
 .PHONY: all_no_tests
 all_no_tests: $(TEST_TARGET)
 
 .PHONY: flags
-flags: 
+flags:
 	@echo
 	@echo "OS ${UNAME_OS}"
 	@echo "Compile C and C++ source with CPPFLAGS:"
@@ -489,7 +506,7 @@ $(CPPUTEST_OBJS_DIR)/%.o: %.cpp
 $(CPPUTEST_OBJS_DIR)/%.o: %.c
 	@echo compiling $(notdir $<)
 	$(SILENCE)mkdir -p $(dir $@)
-	$(SILENCE)$(COMPILE.c) $(DEP_FLAGS)  $(OUTPUT_OPTION) $<
+	$(SILENCE)$(COMPILE.c) $(DEP_FLAGS) $(OUTPUT_OPTION) $<
 
 ifneq "$(MAKECMDGOALS)" "clean"
 -include $(DEP_FILES)
@@ -509,17 +526,18 @@ clean:
 realclean: clean
 	$(SILENCE)rm -rf gcov
 	$(SILENCE)find . -name "*.gdcno" | xargs rm -f
-	$(SILENCE)find . -name "*.[do]" | xargs rm -f	
+	$(SILENCE)find . -name "*.[do]" | xargs rm -f
 
 gcov: test
 ifeq ($(CPPUTEST_USE_VPATH), Y)
-	$(SILENCE)gcov --object-directory $(CPPUTEST_OBJS_DIR) $(SRC) >> $(GCOV_OUTPUT) 2>> $(GCOV_ERROR)
+	$(SILENCE)gcov $(GCOV_ARGS) --object-directory $(CPPUTEST_OBJS_DIR) $(SRC) >> $(GCOV_OUTPUT) 2>> $(GCOV_ERROR)
 else
 	$(SILENCE)for d in $(SRC_DIRS) ; do \
-		gcov --object-directory $(CPPUTEST_OBJS_DIR)/$$d $$d/*.c $$d/*.cpp >> $(GCOV_OUTPUT) 2>>$(GCOV_ERROR) ; \
+		FILES=`ls $$d/*.c $$d/*.cc $$d/*.cpp 2> /dev/null` ; \
+		gcov $(GCOV_ARGS) --object-directory $(CPPUTEST_OBJS_DIR)/$$d $$FILES >> $(GCOV_OUTPUT) 2>>$(GCOV_ERROR) ; \
 	done
 	$(SILENCE)for f in $(SRC_FILES) ; do \
-		gcov --object-directory $(CPPUTEST_OBJS_DIR)/$$f $$f >> $(GCOV_OUTPUT) 2>>$(GCOV_ERROR) ; \
+		gcov $(GCOV_ARGS) --object-directory $(CPPUTEST_OBJS_DIR)/$$f $$f >> $(GCOV_OUTPUT) 2>>$(GCOV_ERROR) ; \
 	done
 endif
 	$(CPPUTEST_HOME)/scripts/filterGcov.sh $(GCOV_OUTPUT) $(GCOV_ERROR) $(GCOV_REPORT) $(TEST_OUTPUT)
@@ -529,11 +547,11 @@ endif
 	$(SILENCE)mv gcov_* gcov
 	@echo "See gcov directory for details"
 
-.PHONEY: format
-format: 
+.PHONY: format
+format:
 	$(CPPUTEST_HOME)/scripts/reformat.sh $(PROJECT_HOME_DIR)
 
-.PHONEY: debug
+.PHONY: debug
 debug:
 	@echo
 	@echo "Target Source files:"

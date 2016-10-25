@@ -35,102 +35,122 @@ class TestTestingFixture
 {
 public:
 
-	TestTestingFixture()
-	{
-		output_ = new StringBufferTestOutput();
-		result_ = new TestResult(*output_);
-		genTest_ = new ExecFunctionTestShell();
-		registry_ = new TestRegistry();
+    TestTestingFixture()
+    {
+        output_ = new StringBufferTestOutput();
+        result_ = new TestResult(*output_);
+        genTest_ = new ExecFunctionTestShell();
+        registry_ = new TestRegistry();
 
-		registry_->setCurrentRegistry(registry_);
-		registry_->addTest(genTest_);
-	}
+        registry_->setCurrentRegistry(registry_);
+        registry_->addTest(genTest_);
 
-	virtual ~TestTestingFixture()
-	{
-		registry_->setCurrentRegistry(0);
-		delete registry_;
-		delete result_;
-		delete output_;
-		delete genTest_;
-	}
+        lineOfCodeExecutedAfterCheck = false;
+    }
 
-	void addTest(UtestShell * test)
-	{
-		registry_->addTest(test);
-	}
+    virtual ~TestTestingFixture()
+    {
+        registry_->setCurrentRegistry(0);
+        delete registry_;
+        delete result_;
+        delete output_;
+        delete genTest_;
+    }
 
-	void setTestFunction(void(*testFunction)())
-	{
-		genTest_->testFunction_ = testFunction;
-	}
+    void addTest(UtestShell * test)
+    {
+        registry_->addTest(test);
+    }
 
-	void setSetup(void(*setupFunction)())
-	{
-		genTest_->setup_ = setupFunction;
-	}
+    void setTestFunction(void(*testFunction)())
+    {
+        genTest_->testFunction_ = testFunction;
+    }
 
-	void setTeardown(void(*teardownFunction)())
-	{
-		genTest_->teardown_ = teardownFunction;
-	}
+    void setSetup(void(*setupFunction)())
+    {
+        genTest_->setup_ = setupFunction;
+    }
 
-	void runAllTests()
-	{
-		registry_->runAllTests(*result_);
-	}
+    void setTeardown(void(*teardownFunction)())
+    {
+        genTest_->teardown_ = teardownFunction;
+    }
 
-	int getFailureCount()
-	{
-		return result_->getFailureCount();
-	}
+    void runTestWithMethod(void(*method)())
+    {
+        setTestFunction(method);
+        runAllTests();
+    }
 
-	int getCheckCount()
-	{
-		return result_->getCheckCount();
-	}
+    void runAllTests()
+    {
+        registry_->runAllTests(*result_);
+    }
 
-	int getIgnoreCount()
-	{
-		return result_->getIgnoredCount();
-	}
+    int getFailureCount()
+    {
+        return result_->getFailureCount();
+    }
 
-	bool hasTestFailed()
-	{
-		return genTest_->hasFailed();
-	}
+    int getCheckCount()
+    {
+        return result_->getCheckCount();
+    }
 
+    int getIgnoreCount()
+    {
+        return result_->getIgnoredCount();
+    }
 
-	void assertPrintContains(const SimpleString& contains)
-	{
-		assertPrintContains(output_, contains);
-	}
+    bool hasTestFailed()
+    {
+        return genTest_->hasFailed();
+    }
 
-	static void assertPrintContains(StringBufferTestOutput* output,
-			const SimpleString& contains)
-	{
-		STRCMP_CONTAINS(contains.asCharString(), output->getOutput().asCharString());
+    void assertPrintContains(const SimpleString& contains)
+    {
+        assertPrintContains(getOutput(), contains);
+    }
 
-	}
+    const SimpleString& getOutput()
+    {
+        return output_->getOutput();
+    }
 
-	TestRegistry* registry_;
-	ExecFunctionTestShell* genTest_;
-	StringBufferTestOutput* output_;
-	TestResult * result_;
+    static void assertPrintContains(const SimpleString& output, const SimpleString& contains)
+    {
+        STRCMP_CONTAINS(contains.asCharString(), output.asCharString());
+    }
+
+    int getRunCount()
+    {
+    	return result_->getRunCount();
+    }
+
+    void checkTestFailsWithProperTestLocation(const char* text, const char* file, int line);
+
+    static void lineExecutedAfterCheck();
+    static bool lineOfCodeExecutedAfterCheck;
+
+    TestRegistry* registry_;
+    ExecFunctionTestShell* genTest_;
+    StringBufferTestOutput* output_;
+    TestResult * result_;
 };
 
 class SetBooleanOnDestructorCall
 {
-	bool& booleanToSet_;
+    bool& booleanToSet_;
 public:
-	SetBooleanOnDestructorCall(bool& booleanToSet) : booleanToSet_(booleanToSet)
-	{
-	}
+    SetBooleanOnDestructorCall(bool& booleanToSet) : booleanToSet_(booleanToSet)
+    {
+    }
 
-	virtual ~SetBooleanOnDestructorCall()
-	{
-		booleanToSet_ = true;
-	}
+    virtual ~SetBooleanOnDestructorCall()
+    {
+        booleanToSet_ = true;
+    }
 };
 
 #endif
